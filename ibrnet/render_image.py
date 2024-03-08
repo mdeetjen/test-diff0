@@ -29,7 +29,8 @@ def render_single_image(ray_sampler,
                         det=False,
                         white_bkgd=False,
                         render_stride=1,
-                        featmaps=None):
+                        featmaps=None,
+                        so3="no_so3"):
     '''
     :param ray_sampler: RaySamplingSingleImage for this view
     :param model:  {'net_coarse': , 'net_fine': , ...}
@@ -61,7 +62,8 @@ def render_single_image(ray_sampler,
                           inv_uniform=inv_uniform,
                           N_importance=N_importance,
                           det=det,
-                          white_bkgd=white_bkgd)
+                          white_bkgd=white_bkgd,
+                          so3=so3)
 
         # handle both coarse and fine outputs
         # cache chunk results on cpu

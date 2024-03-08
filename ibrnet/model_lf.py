@@ -15,9 +15,9 @@
 
 import torch
 import os
-from ibrnet.mlp_network import IBRNet
+from ibrnet.mlp_network_lf import IBRNet
 from ibrnet.feature_network import ResUNet
-
+import ipdb
 
 def de_parallel(model):
     return model.module if hasattr(model, 'module') else model
@@ -69,7 +69,7 @@ class IBRNetModel(object):
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer,
                                                          step_size=args.lrate_decay_steps,
                                                          gamma=args.lrate_decay_factor)
-
+        #pdb.set_trace()
         out_folder = os.path.join(args.rootdir, 'out', args.expname)
         self.start_step = self.load_from_ckpt(out_folder,
                                               load_opt=load_opt,
@@ -130,6 +130,7 @@ class IBRNetModel(object):
         if load_scheduler:
             self.scheduler.load_state_dict(to_load['scheduler'])
 
+        #ipdb.set_trace()
         self.net_coarse.load_state_dict(to_load['net_coarse'])
         self.feature_net.load_state_dict(to_load['feature_net'])
 

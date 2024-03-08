@@ -21,6 +21,7 @@ import sys
 sys.path.append('../')
 from .data_utils import random_crop, random_flip, get_nearest_pose_ids
 from .llff_data_utils import load_llff_data, batch_parse_llff_poses
+import ipdb
 
 
 class LLFFDataset(Dataset):
@@ -82,6 +83,8 @@ class LLFFDataset(Dataset):
         train_intrinsics = self.train_intrinsics[train_set_id]
 
         img_size = rgb.shape[:2]
+        
+        
         camera = np.concatenate((list(img_size), intrinsics.flatten(),
                                  render_pose.flatten())).astype(np.float32)
 
@@ -114,8 +117,10 @@ class LLFFDataset(Dataset):
             train_intrinsics_ = train_intrinsics[id]
             src_rgbs.append(src_rgb)
             img_size = src_rgb.shape[:2]
+            #ipdb.set_trace()
             src_camera = np.concatenate((list(img_size), train_intrinsics_.flatten(),
                                               train_pose.flatten())).astype(np.float32)
+            #ipdb.set_trace()
             src_cameras.append(src_camera)
 
         src_rgbs = np.stack(src_rgbs, axis=0)
@@ -133,6 +138,10 @@ class LLFFDataset(Dataset):
 
         depth_range = torch.tensor([depth_range[0] * 0.9, depth_range[1] * 1.6])
 
+       
+        #print(depth_range.shape)
+        #ipdb.set_trace()
+        
         return {'rgb': torch.from_numpy(rgb[..., :3]),
                 'camera': torch.from_numpy(camera),
                 'rgb_path': rgb_file,

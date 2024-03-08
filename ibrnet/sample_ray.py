@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pdb
 import numpy as np
 import torch
 import torch.nn.functional as F
-
+import pdb
 
 rng = np.random.RandomState(234)
 
@@ -48,10 +49,14 @@ class RaySamplerSingleImage(object):
         self.camera = data['camera']
         self.rgb_path = data['rgb_path']
         self.depth_range = data['depth_range']
+        #self.con_rays = data['con_rays']
+        #self.target_rays = data['target_rays']
+
         self.device = device
+        #ipdb.set_trace()
         W, H, self.intrinsics, self.c2w_mat = parse_camera(self.camera)
         self.batch_size = len(self.camera)
-
+        #pdb.set_trace()
         self.H = int(H[0])
         self.W = int(W[0])
 
@@ -85,17 +90,43 @@ class RaySamplerSingleImage(object):
         :return:
         '''
         u, v = np.meshgrid(np.arange(W)[::self.render_stride], np.arange(H)[::self.render_stride])
+        #ipdb.set_trace()
         u = u.reshape(-1).astype(dtype=np.float32)  # + 0.5    # add half pixel
         v = v.reshape(-1).astype(dtype=np.float32)  # + 0.5
+        #ipdb.set_trace()
         pixels = np.stack((u, v, np.ones_like(u)), axis=0)  # (3, H*W)
         pixels = torch.from_numpy(pixels)
         batched_pixels = pixels.unsqueeze(0).repeat(self.batch_size, 1, 1)
 
         rays_d = (c2w[:, :3, :3].bmm(torch.inverse(intrinsics[:, :3, :3])).bmm(batched_pixels)).transpose(1, 2)
+
+        #ipdb.set_trace()
+
         rays_d = rays_d.reshape(-1, 3)
         rays_o = c2w[:, :3, 3].unsqueeze(1).repeat(1, rays_d.shape[0], 1).reshape(-1, 3)  # B x HW x 3
+        #ipdb.set_trace()
         return rays_o, rays_d
 
+    def get_dest_rays(self, select_inds):
+        rays_o = self.rays_o[select_inds]
+        rays_d = self.rays_d[select_inds]
+
+        if self.rgb is not None:
+            rgb = self.rgb[select_inds]
+        else:
+            rgb = None
+
+        ret = {'ray_o': rays_o.cuda(),
+               'ray_d': rays_d.cuda(),
+               'camera': self.camera.cuda(),
+               'depth_range': self.depth_range.cuda(),
+               'rgb': rgb.cuda() if rgb is not None else None,
+               'src_rgbs': self.src_rgbs.cuda() if self.src_rgbs is not None else None,
+               'src_cameras': self.src_cameras.cuda() if self.src_cameras is not None else None,
+               'selected_inds': select_inds
+        }
+        return ret
+        
     def get_all(self):
         ret = {'ray_o': self.rays_o.cuda(),
                'ray_d': self.rays_d.cuda(),

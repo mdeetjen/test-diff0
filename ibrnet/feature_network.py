@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -243,6 +244,7 @@ class ResUNet(nn.Module):
         return x
 
     def forward(self, x):
+        #pdb.set_trace()
         x = self.relu(self.bn1(self.conv1(x)))
 
         x1 = self.layer1(x)

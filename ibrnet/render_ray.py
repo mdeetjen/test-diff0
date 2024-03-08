@@ -16,6 +16,7 @@
 import torch
 from collections import OrderedDict
 
+
 ########################################################################################################################
 # helper functions for nerf ray rendering
 ########################################################################################################################
@@ -84,8 +85,11 @@ def sample_along_camera_ray(ray_o, ray_d, depth_range,
     '''
     # will sample inside [near_depth, far_depth]
     # assume the nearest possible depth is at least (min_ratio * depth)
+    
     near_depth_value = depth_range[0, 0]
     far_depth_value = depth_range[0, 1]
+
+    #ipdb.set_trace()
     assert near_depth_value > 0 and far_depth_value > 0 and far_depth_value > near_depth_value
 
     near_depth = near_depth_value * torch.ones_like(ray_d[..., 0])
@@ -127,9 +131,12 @@ def raw2outputs(raw, z_vals, mask, white_bkgd=False):
     :param ray_d: [N_rays, 3]
     :return: {'rgb': [N_rays, 3], 'depth': [N_rays,], 'weights': [N_rays,], 'depth_std': [N_rays,]}
     '''
+    #ipdb.set_trace()
     rgb = raw[:, :, :3]     # [N_rays, N_samples, 3]
     sigma = raw[:, :, 3]    # [N_rays, N_samples]
-
+    #############
+    raw_rgb = rgb.clone()
+    #############
     # note: we did not use the intervals here, because in practice different scenes from COLMAP can have
     # very different scales, and using interval can affect the model's generalization ability.
     # Therefore we don't use the intervals for both training and evaluation.
@@ -161,7 +168,8 @@ def raw2outputs(raw, z_vals, mask, white_bkgd=False):
                        ('weights', weights),                # used for importance sampling of fine samples
                        ('mask', mask),
                        ('alpha', alpha),
-                       ('z_vals', z_vals)
+                       ('z_vals', z_vals),
+                       ('rgb_raw',raw_rgb)
                        ])
 
     return ret
@@ -175,7 +183,8 @@ def render_rays(ray_batch,
                 inv_uniform=False,
                 N_importance=0,
                 det=False,
-                white_bkgd=False):
+                white_bkgd=False,
+                so3="no_so3"):
     '''
     :param ray_batch: {'ray_o': [N_rays, 3] , 'ray_d': [N_rays, 3], 'view_dir': [N_rays, 2]}
     :param model:  {'net_coarse':  , 'net_fine': }
@@ -200,9 +209,12 @@ def render_rays(ray_batch,
     rgb_feat, ray_diff, mask = projector.compute(pts, ray_batch['camera'],
                                                  ray_batch['src_rgbs'],
                                                  ray_batch['src_cameras'],
-                                                 featmaps=featmaps[0])  # [N_rays, N_samples, N_views, x]
+                                                 featmaps=featmaps[0],
+                                                 so3=so3)  # [N_rays, N_samples, N_views, x]
+    #ipdb.set_trace()
     pixel_mask = mask[..., 0].sum(dim=2) > 1   # [N_rays, N_samples], should at least have 2 observations
     raw_coarse = model.net_coarse(rgb_feat, ray_diff, mask)   # [N_rays, N_samples, 4]
+    #ipdb.set_trace()
     outputs_coarse = raw2outputs(raw_coarse, z_vals, pixel_mask,
                                  white_bkgd=white_bkgd)
     ret['outputs_coarse'] = outputs_coarse
@@ -239,12 +251,14 @@ def render_rays(ray_batch,
         rgb_feat_sampled, ray_diff, mask = projector.compute(pts, ray_batch['camera'],
                                                              ray_batch['src_rgbs'],
                                                              ray_batch['src_cameras'],
-                                                             featmaps=featmaps[1])
+                                                             featmaps=featmaps[1],
+                                                             so3=so3)
 
         pixel_mask = mask[..., 0].sum(dim=2) > 1  # [N_rays, N_samples]. should at least have 2 observations
         raw_fine = model.net_fine(rgb_feat_sampled, ray_diff, mask)
         outputs_fine = raw2outputs(raw_fine, z_vals, pixel_mask,
                                    white_bkgd=white_bkgd)
+
         ret['outputs_fine'] = outputs_fine
 
     return ret
