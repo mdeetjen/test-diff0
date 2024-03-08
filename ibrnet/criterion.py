@@ -24,6 +24,7 @@ class Criterion(nn.Module):
         '''
         training criterion
         '''
+        #ipdb.set_trace()
         pred_rgb = outputs['rgb']
         pred_mask = outputs['mask'].float()
         gt_rgb = ray_batch['rgb']
